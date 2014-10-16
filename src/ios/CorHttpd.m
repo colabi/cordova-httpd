@@ -100,6 +100,51 @@
     self.httpServer = nil;
     self.localPath = @"";
     self.url = @"";
+    
+    NSString* wwwRoot = @"";
+    int port = 8080;
+    
+
+    [DDLog addLogger:[DDTTYLogger sharedInstance]];
+    self.httpServer = [[HTTPServer alloc] init];
+    
+    // Tell the server to broadcast its presence via Bonjour.
+    // This allows browsers such as Safari to automatically discover our service.
+    //[self.httpServer setType:@"_http._tcp."];
+    
+    // Normally there's no need to run our server on any specific port.
+    // Technologies like Bonjour allow clients to dynamically discover the server's port at runtime.
+    // However, for easy testing you may want force a certain port so you can just hit the refresh button.
+    // [httpServer setPort:12345];
+    
+    [self.httpServer setPort:port];
+    
+    // Serve files from our embedded Web folder
+    const char * str = [wwwRoot UTF8String];
+    if(*str == '/') {
+        self.localPath = wwwRoot;
+    } else {
+        NSString* basePath = [[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent:@"www"];
+        self.localPath = [NSString stringWithFormat:@"%@/%@", basePath, wwwRoot];
+    }
+    NSLog(@"Setting document root: %@", self.localPath);
+    [self.httpServer setDocumentRoot:self.localPath];
+    
+    NSError *error;
+    if([self.httpServer start:&error]) {
+        int listenPort = [self.httpServer listeningPort];
+        NSLog(@"Started httpd on port %d", listenPort);
+        
+        NSString* ip = [self getIPAddress:YES];
+        self.url = [NSString stringWithFormat:@"http://%@:%d/", ip, listenPort];
+        
+    } else {
+        NSLog(@"Error starting httpd: %@", error);
+        
+        NSString* errmsg = [error description];
+    }
+    
+
 }
 
 - (void)startServer:(CDVInvokedUrlCommand*)command
